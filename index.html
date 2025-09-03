@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detección de Gestos Faciales</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #f8f9fa; font-family: Arial, sans-serif; }
+    #canvasOutput { border: 3px solid #05053b; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.2); transition: 0.3s; display:block; }
+    .dashboard { background: rgb(201, 226, 240); border-radius: 10px; padding: 15px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    footer { background: #05053b; color: white; text-align: center; padding: 15px; margin-top: 40px; }
+    nav { box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .btn { margin: 5px; transition: 0.3s; }
+    .btn:hover { transform: scale(1.05); }
+    .counter { text-align: center; margin: 10px; }
+    .neon-text { color: #05053b; font-weight: bold; text-shadow: 0 0 5px #05053b, 0 0 10px #05053b; transition: 0.3s; }
+    .instructions { background: #e9ecef; padding: 15px; border-radius: 8px; margin-left: 20px; max-width: 350px; }
+    .video-section { display: flex; flex-direction: column; gap: 20px; align-items: center; position:relative; }
+    @media(min-width:992px){ .video-section { flex-direction: row; justify-content: center; align-items: flex-start; } }
+    h1, h2, h3, .lead { color: #05053b; }
+    .banner { width: 100%; height: 150px; background: linear-gradient(90deg, #05053b, #007bff); margin-bottom: 20px; border-radius: 10px; animation: slideBg 5s linear infinite alternate; }
+    @keyframes slideBg { 0% {background-position:0 0;} 100% {background-position:100% 0;} }
+    #placeholderImg { border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(90deg, #05053b, #2237ad)">
+    <div class="container-fluid">
+      <a class="navbar-brand fw-bold" href="#">Detección de Gestos</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+              data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" 
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link active" href="#inicio" style="color:#f0f0f0;">Inicio</a></li>
+          <li class="nav-item"><a class="nav-link" href="#dashboard" style="color:#f0f0f0;">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="#instrucciones" style="color:#f0f0f0;">Instrucciones</a></li>
+          <li class="nav-item"><a class="nav-link" href="#acerca" style="color:#f0f0f0;">Acerca de</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Sección Inicio -->
+  <section id="inicio" class="container text-center">
+    <h1 class="fw-bold">Sistema de Detección Facial</h1>
+    <p class="lead">Monitoreo en tiempo real de gestos faciales</p>
+    <div class="mt-4">
+      <button id="btnStart" class="btn btn-success">🎥 Encender Cámara</button>
+      <button id="btnStop" class="btn btn-danger">⏹️ Apagar Cámara</button>
+        <button id="btnReset" class="btn btn-warning">🔄 Reiniciar</button>
+
+    </div>
+
+    <div class="video-section mt-4">
+      <!-- Canvas y placeholder juntos -->
+      <div style="position:relative;">
+        <canvas id="canvasOutput" width="640" height="480"></canvas>
+        <img id="placeholderImg" src="img/placeholder.png" alt="Vista previa" width="640" height="480"
+             style="position:absolute; top:0; left:0; z-index:1;">
+      </div>
+
+      <div class="instructions">
+        <h5 class="fw-bold" style="color:#05053b;">📋 Instrucciones</h5>
+        <ul>
+          <li>Haz clic en <strong>Encender Cámara</strong> para iniciar.</li>
+          <li>Permite el acceso a tu cámara.</li>
+          <li>Mira de frente a la cámara.</li>
+          <li>El sistema detecta rostro, ojos y boca.</li>
+          <li>Haz clic en <strong>Apagar Cámara</strong> cuando termines.</li>
+        </ul>
+      </div>
+    </div>
+    <p id="errorMessage" class="mt-3 text-danger fw-bold"></p>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="container my-5">
+    <h2 class="fw-bold">Dashboard de Resultados</h2>
+    <div class="dashboard mt-3 d-flex justify-content-around flex-wrap" style="padding:15px;">
+      <div class="counter">
+        <p class="fs-5">👀 Parpadeos</p>
+        <span id="eye-count" class="fs-2 neon-text">0</span>
+      </div>
+      <div class="counter">
+        <p class="fs-5">🙆 Cejas</p>
+        <span id="eyebrow-count" class="fs-2 neon-text">0</span>
+      </div>
+      <div class="counter">
+        <p class="fs-5">👄 Boca</p>
+        <span id="mouth-count" class="fs-2 neon-text">0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Acerca de -->
+  <section id="acerca" class="container my-5">
+    <h2 class="fw-bold">📖 Acerca de</h2>
+    <p>Proyecto desarrollado para el monitoreo de gestos faciales en tiempo real mediante tecnologías web, 
+      con el objetivo de mejorar la interacción y el análisis de comportamientos en aplicaciones corporativas. 
+      El sistema permite detectar movimientos de ojos, cejas y boca, ofreciendo datos precisos para estudios de 
+      usabilidad, experiencia del usuario y sistemas de seguridad basados en reconocimiento facial.</p>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2025 Fernanda Alcántara. Todos los derechos reservados.</p>
+  </footer>
+
+  <!-- Scripts MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script type="module" src="js/script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
