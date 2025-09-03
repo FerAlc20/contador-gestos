@@ -14,6 +14,7 @@ const placeholderImg = document.getElementById('placeholderImg');
 
 const btnStart = document.getElementById('btnStart');
 const btnStop = document.getElementById('btnStop');
+const btnReset = document.getElementById('btnReset');
 
 const eyeCountEl = document.getElementById('eye-count');
 const eyebrowCountEl = document.getElementById('eyebrow-count');
@@ -31,7 +32,27 @@ let earHistory=[], browHistory=[], mouthHistory=[];
 const EAR_HISTORY_LEN=5, BROW_HISTORY_LEN=4, MOUTH_HISTORY_LEN=3;
 let baselineEAR=null, browBaseline=null, calibrationCount=0, calibrationFrames=30;
 
-// Funciones para calcular métricas (EAR, boca, cejas)
+// ----------- API Mock (enviar gestos) -----------
+async function sendGestureData(parpadeo, cejas, boca) {
+    try {
+        const response = await fetch("https://68b89974b71540504328aaca.mockapi.io/api/v1/gestos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                parpadeo: parpadeo,
+                cejas: cejas,
+                boca: boca,
+                fecha: new Date().toISOString()
+            })
+        });
+        if (!response.ok) throw new Error("Error al guardar en MockAPI");
+        console.log("Gesto guardado:", await response.json());
+    } catch (error) {
+        console.error("Fallo en la inserción:", error);
+    }
+}
+
+// ----------- Funciones para métricas -----------
 function getEAR(landmarks, left=true){
     const p = left ? [33,160,158,133,153,144] : [362,385,387,263,373,380];
     const A = distance(landmarks[p[1]], landmarks[p[5]]);
@@ -74,7 +95,7 @@ function getBrowMovementSmooth(landmarks){
     return avgBrow - browBaseline;
 }
 
-// MediaPipe results
+// ----------- MediaPipe results -----------
 function onResults(results){
     if(!results.multiFaceLandmarks || results.multiFaceLandmarks.length===0) return;
     const landmarks = results.multiFaceLandmarks[0];
@@ -91,7 +112,7 @@ function onResults(results){
     drawConnectors(ctx, landmarks, FACEMESH_LEFT_EYEBROW, {color:'#ec4e05ff'});
     drawConnectors(ctx, landmarks, FACEMESH_RIGHT_EYEBROW, {color:'#ec4e05ff'});
 
-    // Parpadeos
+    // ----------- Parpadeos -----------
     const earSmooth = getEARSmooth(landmarks);
     if(calibrationCount<calibrationFrames){
         if(!baselineEAR) baselineEAR = earSmooth;
@@ -99,16 +120,20 @@ function onResults(results){
         calibrationCount++;
     }
     if(baselineEAR && earSmooth<baselineEAR*0.7 && !blinkCooldown){
-        eyeCount++; eyeCountEl.textContent=eyeCount;
+        eyeCount++; 
+        eyeCountEl.textContent=eyeCount;
+        sendGestureData(eyeCount, eyebrowCount, mouthCount); // Enviar al API
         blinkCooldown=true; setTimeout(()=>blinkCooldown=false,250);
     }
 
-    // Cejas
+    // ----------- Cejas -----------
     const browMove = getBrowMovementSmooth(landmarks);
     const browThreshold = 0.015;
     if(calibrationCount>=calibrationFrames){
         if(browMove>browThreshold && !browUp && !browCooldown){
-            eyebrowCount++; eyebrowCountEl.textContent=eyebrowCount;
+            eyebrowCount++; 
+            eyebrowCountEl.textContent=eyebrowCount;
+            sendGestureData(eyeCount, eyebrowCount, mouthCount); // Enviar al API
             browUp=true; browCooldown=true;
             setTimeout(()=>browCooldown=false,300);
         } else if(browMove<browThreshold*0.5 && browUp){
@@ -116,13 +141,19 @@ function onResults(results){
         }
     }
 
-    // Boca
+    // ----------- Boca -----------
     const mouthSmooth = getMouthOpennessSmooth(landmarks);
-    if(mouthSmooth>0.32 && !mouthOpen){ mouthCount++; mouthOpen=true; mouthCountEl.textContent=mouthCount; }
-    else if(mouthSmooth<=0.28 && mouthOpen){ mouthOpen=false; }
+    if(mouthSmooth>0.32 && !mouthOpen){ 
+        mouthCount++; mouthOpen=true; 
+        mouthCountEl.textContent=mouthCount; 
+        sendGestureData(eyeCount, eyebrowCount, mouthCount); // Enviar al API
+    }
+    else if(mouthSmooth<=0.28 && mouthOpen){ 
+        mouthOpen=false; 
+    }
 }
 
-// Botones
+// ----------- Botones -----------
 btnStart.addEventListener('click', async ()=>{
     try{
         placeholderImg.style.display='none';
@@ -143,13 +174,8 @@ btnStop.addEventListener('click', ()=>{
     placeholderImg.style.display='block';
 });
 
-const btnReset = document.getElementById('btnReset');
-
 btnReset.addEventListener('click', ()=>{
-    // Detener cámara si está activa
     if(camera) camera.stop();
-
-    // Limpiar canvas
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     // Reiniciar contadores
@@ -172,7 +198,6 @@ btnReset.addEventListener('click', ()=>{
     browBaseline = null;
     calibrationCount = 0;
 
-    // Mostrar placeholder de nuevo
     placeholderImg.style.display = 'block';
     canvas.style.display = 'block';
     errorMessage.textContent = '';
